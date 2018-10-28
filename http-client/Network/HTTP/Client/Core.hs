@@ -3,6 +3,7 @@
 module Network.HTTP.Client.Core
     ( withResponse
     , httpLbs
+    , httpLbs'
     , httpNoBody
     , httpRaw
     , httpRaw'
@@ -24,11 +25,15 @@ import Network.HTTP.Client.Cookies
 import Data.Maybe (fromMaybe, isJust)
 import Data.Time
 import Control.Exception
+import qualified Data.ByteString as S
 import qualified Data.ByteString.Lazy as L
+import qualified Data.ByteString.Lazy.Internal as L
+import Data.Functor
 import Data.Monoid
 import Control.Monad (void)
 import System.Timeout (timeout)
 import Data.KeyedPool
+import System.IO.Unsafe (unsafeInterleaveIO)
 
 -- | Perform a @Request@ using a connection acquired from the given @Manager@,
 -- and then provide the @Response@ to the given function. This function is
@@ -61,6 +66,20 @@ httpLbs :: Request -> Manager -> IO (Response L.ByteString)
 httpLbs req man = withResponse req man $ \res -> do
     bss <- brConsume $ responseBody res
     return res { responseBody = L.fromChunks bss }
+
+-- | An alternative version of 'httpLbs' which performs lazy I\/O.
+httpLbs' :: Request -> Manager -> IO (Response L.ByteString)
+httpLbs' req man = do
+    res <- responseOpen req man
+    let finalizer = responseClose res
+        lazy_consume = unsafeInterleaveIO go
+        go = do
+            c <- onException (responseBody res) finalizer
+            if S.null c
+                then finalizer $> L.empty
+                else L.chunk c <$> lazy_consume
+    lbs <- lazy_consume
+    return res {responseBody = lbs}
 
 -- | A convenient wrapper around 'withResponse' which ignores the response
 -- body. This is useful, for example, when performing a HEAD request.

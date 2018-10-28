@@ -80,6 +80,7 @@ module Network.HTTP.Client
       -- * Performing requests
       withResponse
     , httpLbs
+    , httpLbs'
     , httpNoBody
     , responseOpen
     , responseClose

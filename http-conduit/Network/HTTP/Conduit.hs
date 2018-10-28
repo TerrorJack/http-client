@@ -139,6 +139,7 @@ module Network.HTTP.Conduit
     ( -- * Perform a request
       simpleHttp
     , httpLbs
+    , httpLbs'
     , http
       -- * Datatypes
     , Proxy (..)
@@ -228,7 +229,7 @@ import           Control.Applicative          as A ((<$>))
 import           Control.Monad.IO.Unlift      (MonadIO (liftIO))
 import           Control.Monad.Trans.Resource
 
-import qualified Network.HTTP.Client          as Client (httpLbs, responseOpen, responseClose)
+import qualified Network.HTTP.Client          as Client (httpLbs, httpLbs', responseOpen, responseClose)
 import qualified Network.HTTP.Client          as HC
 import qualified Network.HTTP.Client.Conduit  as HCC
 import           Network.HTTP.Client.Internal (createCookieJar,
@@ -273,6 +274,10 @@ import           Network.HTTP.Client.Internal (Cookie (..), CookieJar (..),
 -- specified by the 'redirectCount' setting.
 httpLbs :: MonadIO m => Request -> Manager -> m (Response L.ByteString)
 httpLbs r m = liftIO $ Client.httpLbs r m
+
+-- | An alternative version of 'httpLbs' which performs lazy I\/O.
+httpLbs' :: MonadIO m => Request -> Manager -> m (Response L.ByteString)
+httpLbs' r m = liftIO $ Client.httpLbs' r m
 
 -- | Download the specified URL, following any redirects, and
 -- return the response body.
